@@ -18,79 +18,75 @@ let ups_min = 0;        // how many upvotes does a post need
 
 let url = 'https://www.reddit.com/r/youtubehaiku/new.json?sort='+ orderby +'&limit=100';
 
+let room = location.pathname.substr( location.pathname.lastIndexOf( '/' ) + 1 );
+let playlistID;
+
 // add btn
 $(function() {
     let btn = document.createElement('div');
+    playlistID = $(".selection.dropdown").val();
+
     btn.className = 'item';
     btn.style.cursor = 'pointer';
     btn.innerHTML = 'Add Haikus';
-    btn.addEventListener( 'click' , addHaikus);
+    btn.addEventListener( 'click' , findHaikus);
     $('.topbar-menu > .ui').prepend(btn);
 })
 
-// add Haikus to first Playlist
-function addHaikus( page, count ) {
-    if ( !count ) {
-        count = limit;
-    }
-
+// search in Reddit
+function findHaikus( page, playlist = [] ) {
     let req = url;
 
     if ( page ) {
         req += '&after=' + page;
     }
 
-    $.get( req, (data) => {
+    $.get( req, data => {
 
         let posts = data.data.children;
-        let room = location.pathname.substr( location.pathname.lastIndexOf( '/' ) + 1 );
-
         let nextPage = data.data.after;
 
-        $w2g.getJSON("/streams/" + room + "/playlists").then(function(e) {
-            let playlistID = e[0].key;
-            let postObject = [];
-            let limitReached = false;
+        let limitReached = false;
 
-            posts.forEach(p => {
-                let video = p.data.url;
-                let title = p.data.title;
-                let thumb = p.data.thumbnail;
-                let ups = p.data.ups;
+        posts.forEach(p => {
+            let video = p.data.url;
+            let title = p.data.title;
+            let thumb = p.data.thumbnail;
+            let ups = p.data.ups;
 
-                // check if youtube is in the url
-                if ( ! video.match( /\/\/(www\.)?youtu(\.)?be/ ) ) {
-                    return;
-                }
-
-                // compare ups
-                if ( ups < ups_min ) {
-                    return;
-                }
-                
-                if ( count <= 0 ) {
-                    return limitReached = true;
-                }
-                
-                postObject.push( {
-                    url: video,
-                    title: title,
-                    thumb: thumb
-                } );
-
-                count--;
-            });
-
-            $w2g.postJSON("/rooms/" + room + "/playlists/" + playlistID + "/playlist_items/sync_update", {
-                add_items: JSON.stringify(postObject)
-            });
-
-            if ( limitReached ) {
+            // check if youtube is in the url
+            if ( ! video.match( /\/\/(www\.)?youtu(\.)?be/ ) ) {
                 return;
             }
 
-            addHaikus( nextPage, count );
+            // compare ups
+            if ( ups < ups_min ) {
+                return;
+            }
 
+            if ( playlist.length >= limit ) {
+                return limitReached = true;
+            }
+
+            playlist.push( {
+                url: video,
+                title: title,
+                thumb: thumb
+            } );
         });
+
+        if ( limitReached ) {
+            console.log( playlist );
+            return createPlaylist( playlist );
+        }
+
+        addHaikus( nextPage, playlist );
     } )
+}
+
+// w2g stuff
+function createPlaylist(posts) {
+    $w2g.postJSON("/rooms/" + room + "/playlists/" + playlistID + "/playlist_items/sync_update", {
+        add_items: JSON.stringify(posts)
+    });
 }

@@ -12,26 +12,34 @@
 // w2g cant handle more than 50
 let limit = 50;
 
-let orderby = 'new'     // you can sort by "new", "hot", or everything else the reddit api excepts as param
-let ups_min = 0;        // how many upvotes does a post need
+let orderby = 'top'     // you can sort by "new", "hot", or everything else the reddit api excepts as param
+let sort = 'day' // hour, day, week, month, year, all
+let ups_min = 20;        // how many upvotes does a post need
+let fail_after_tries = 20;
+let fail_after = 20;
 
-
-let url = 'https://www.reddit.com/r/youtubehaiku/new.json?sort='+ orderby +'&limit=100';
-
-let room = location.pathname.substr( location.pathname.lastIndexOf( '/' ) + 1 );
-let playlistID;
+var playlistid = "";
 
 // add btn
 $(function() {
     let btn = document.createElement('div');
-    playlistID = $(".selection.dropdown").val();
-
     btn.className = 'item';
     btn.style.cursor = 'pointer';
     btn.innerHTML = 'Add Haikus';
-    btn.addEventListener( 'click' , findHaikus);
-    $('.topbar-menu > .ui').prepend(btn);
+    btn.addEventListener( 'click' , startHaiku);
+    $('.w2g-sidebar').prepend("<hr style='width: 100%;'>");
+    $('.w2g-sidebar').prepend(btn);
+    $('.w2g-sidebar').prepend("<input id='reddit_ups' type='text' width='30' value='20' placeholder='Upvotes' style='min-height: 25px;'>");
+    $('.w2g-sidebar').prepend("<select id='reddit_sort' style='min-height: 25px;'><option value='hour'>hour</option><option value='day' selected>day</option><option value='week'>week</option><option value='month'>month</option><option value='year'>year</option><option value='all'>all</option></select>");
+    $('.w2g-sidebar-message').hide();
 })
+
+function startHaiku(){
+    sort = $("#reddit_sort").val();
+    ups_min = $("#reddit_ups").val();
+    fail_after = fail_after_tries;
+    addHaikus();
+}
 
 // search in Reddit
 function findHaikus( page, playlist = [] ) {
@@ -80,7 +88,11 @@ function findHaikus( page, playlist = [] ) {
             return createPlaylist( playlist );
         }
 
-        addHaikus( nextPage, playlist );
+        if ( fail_after < 0 )
+            return createPlaylist( playlist );
+        else fail_after--;
+
+        findHaikus( nextPage, playlist );
     } )
 }
 

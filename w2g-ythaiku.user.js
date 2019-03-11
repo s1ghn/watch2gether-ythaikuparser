@@ -38,7 +38,7 @@ function startHaiku(){
     sort = $("#reddit_sort").val();
     ups_min = $("#reddit_ups").val();
     fail_after = fail_after_tries;
-    addHaikus();
+    findHaikus();
 }
 
 // search in Reddit
